@@ -3,17 +3,36 @@ from tkinter import messagebox
 import random
 import os
 import pygame
-pygame.mixer.init()
-pygame.mixer.music.load('01. Ground Theme.mp3')
-pygame.mixer.music.set_volume(0.3)
-CORRECT_SOUND = pygame.mixer.Sound('mixkit-sci-fi-interface-robot-click-901.wav')
-WRONG_SOUND = pygame.mixer.Sound('mixkit-click-error-1110.wav')
 class GameConfig:
     game_duration = 60
     colors = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
     hex_codes = ['#FF0000', '#0000FF', '#008000', '#FF69B4', '#FFD700', '#8A2BE2', '#FF4500', '#000000']
     color_map = dict(zip(colors, hex_codes))
     high_score_file = 'highscore.txt'
+class AudioManager:
+    def __init__(self):
+        self.enabled = False
+        try:
+            pygame.mixer.init()
+            pygame.mixer.music.load('01. Ground Theme.mp3')
+            pygame.mixer.music.set_volume(0.3)
+            self.correct_sound = pygame.mixer.Sound('mixkit-sci-fi-interface-robot-click-901.wav')
+            self.wrong_sound = pygame.mixer.Sound('mixkit-click-error-1110.wav')
+            self.enabled = True
+        except Exception as e:
+            print("Audio disabled:", e)
+    def play_music(self):
+        if self.enabled:
+            pygame.mixer.music.play(-1)
+    def stop_music(self):
+        if self.enabled:
+            pygame.mixer.music.stop()
+    def play_correct(self):
+        if self.enabled:
+            self.correct_sound.play()
+    def play_wrong(self):
+        if self.enabled:
+            self.wrong_sound.play()
 class HighScoreManager:
     def __init__(self, filename):
         self.filename = filename
@@ -152,28 +171,32 @@ class ColorMatchGame:
         self.ui = GameUi(root, self, self.config)
         self.timer_id = None
         self.game_running = False
+        self.audio = AudioManager()
     def start_game(self):
         self.engine.reset()
         self.game_running = True
         self.ui.toggle_buttons(tk.NORMAL)
         self.ui.update_score(0)
-        pygame.mixer.music.play(-1)
+        self.audio.play_music()
         self.countdown()
         self.new_round()
+        self.ui.start_button.config(state=tk.DISABLED)
     def new_round(self):
         word, color = self.engine.next_round()
         self.ui.update_word(word, color)
+        self.ui.toggle_buttons(tk.NORMAL)
     def handle_guess(self, choice):
         if not self.game_running:
             return
         correct = self.engine.check_answer(choice)
         self.ui.update_score(self.engine.score)
         self.ui.show_feedback(correct)
+        self.ui.toggle_buttons(tk.DISABLED)
         if correct:
-            CORRECT_SOUND.play()
+            self.audio.play_correct()
         else:
-            WRONG_SOUND.play()
-        self.ui.root.after(200, self.new_round)
+            self.audio.play_wrong()
+        self.ui.root.after(300, self.new_round)
     def countdown(self):
         if not self.game_running:
             return
@@ -185,10 +208,14 @@ class ColorMatchGame:
             self.end_game()
     def end_game(self):
         self.game_running = False
+        self.ui.start_button.config(
+            text="Restart Game",
+            state=tk.NORMAL
+        )
         if self.timer_id:
             self.ui.root.after_cancel(self.timer_id)
         self.ui.toggle_buttons(tk.DISABLED)
-        pygame.mixer.music.stop()
+        self.audio.stop_music()
         new_record = False
         if self.engine.score > self.high_score:
             self.high_score = self.engine.score
