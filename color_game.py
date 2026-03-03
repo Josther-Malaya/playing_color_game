@@ -2,8 +2,12 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 import os
-import pyttsx3
-import threading
+import pygame
+pygame.mixer.init()
+pygame.mixer.music.load('01. Ground Theme.mp3')
+pygame.mixer.music.set_volume(0.3)
+CORRECT_SOUND = pygame.mixer.Sound('mixkit-sci-fi-interface-robot-click-901.wav')
+WRONG_SOUND = pygame.mixer.Sound('mixkit-click-error-1110.wav')
 class GameConfig:
     game_duration = 60
     colors = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
@@ -58,6 +62,14 @@ class GameUi:
     def create_widgets(self):
         self.info_frame = tk.Frame(self.root, bg='#3e4451', pady=10)
         self.info_frame.pack(fill='x')
+        self.high_score_label = tk.Label(
+            self.info_frame,
+            text=f"High Score: {self.controller.high_score}",
+            font=('Arial', 14),
+            bg='#3e4451',
+            fg='white'
+        )
+        self.high_score_label.pack()
         self.game_frame = tk.Frame(self.root, bg='#282c34')
         self.game_frame.pack(expand=True)
         self.button_frame = tk.Frame(self.root, bg='#282c34')
@@ -106,6 +118,8 @@ class GameUi:
                 text=color,
                 font=('Arial', 27, 'bold'),
                 width=10,
+                bg=self.config.color_map[color],
+                fg='white',
                 state=tk.DISABLED,
                 command=lambda c=color: self.controller.handle_guess(c)
             )
@@ -134,18 +148,10 @@ class ColorMatchGame:
         self.config = GameConfig()
         self.engine = GameEngine(self.config)
         self.storage = HighScoreManager(self.config.high_score_file)
-        self.ui = GameUi(root, self, self.config)
-        self.voice = pyttsx3.init()
-        self.voice.setProperty('rate', 180)
         self.high_score = self.storage.load()
+        self.ui = GameUi(root, self, self.config)
         self.timer_id = None
         self.game_running = False
-    def speak_word(self, word):
-        threading.Thread(target=self._speak, args=(word,), daemon=True).start()
-    def _speak(self, word):
-        self.voice.stop()
-        self.voice.say(word)
-        self.voice.runAndWait()
     def start_game(self):
         self.engine.reset()
         self.game_running = True
@@ -156,13 +162,16 @@ class ColorMatchGame:
     def new_round(self):
         word, color = self.engine.next_round()
         self.ui.update_word(word, color)
-        self.speak_word(word)
     def handle_guess(self, choice):
         if not self.game_running:
             return
         correct = self.engine.check_answer(choice)
         self.ui.update_score(self.engine.score)
         self.ui.show_feedback(correct)
+        if correct:
+            CORRECT_SOUND.play()
+        else:
+            WRONG_SOUND.play()
         self.ui.root.after(200, self.new_round)
     def countdown(self):
         if not self.game_running:
@@ -175,12 +184,16 @@ class ColorMatchGame:
             self.end_game()
     def end_game(self):
         self.game_running = False
+        if self.timer_id:
+            self.ui.root.after_cancel(self.timer_id)
         self.ui.toggle_buttons(tk.DISABLED)
+        pygame.mixer.music.stop()
         new_record = False
         if self.engine.score > self.high_score:
             self.high_score = self.engine.score
             self.storage.save(self.high_score)
             new_record = True
+        self.ui.high_score_label.config(text=f"High Score: {self.high_score}")
         self.ui.show_game_over(self.engine.score, self.high_score, new_record)
 if __name__ == "__main__":
     root = tk.Tk()
