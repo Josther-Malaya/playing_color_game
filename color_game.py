@@ -157,6 +157,7 @@ class ColorMatchGame:
         self.game_running = True
         self.ui.toggle_buttons(tk.NORMAL)
         self.ui.update_score(0)
+        pygame.mixer.music.play(-1)
         self.countdown()
         self.new_round()
     def new_round(self):
