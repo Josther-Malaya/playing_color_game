@@ -16,8 +16,8 @@ class AudioManager:
             pygame.mixer.init()
             pygame.mixer.music.load('01. Ground Theme.mp3')
             pygame.mixer.music.set_volume(0.3)
-            self.correct_sound = pygame.mixer.Sound('mixkit-sci-fi-interface-robot-click-901.wav')
-            self.wrong_sound = pygame.mixer.Sound('mixkit-click-error-1110.wav')
+            self.correct_sound = pygame.mixer.Sound('mac-quack.mp3')
+            self.wrong_sound = pygame.mixer.Sound('movie_1.mp3')
             self.enabled = True
         except Exception as e:
             print("Audio disabled:", e)
