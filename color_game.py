@@ -1,14 +1,11 @@
 import tkinter as tk
-import os
-import random
 from tkinter import messagebox
-
+import random
+import os
 GAME_DURATION_SECONDS = 60
 COLOR_NAMES = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
 HEX_CODES = ['#FF0000', '#0000FF', '#008000', '#FF69B4', '#FFD700', '#8A2BE2', '#FF4500', '#000000']
 COLOR_MAP = dict(zip(COLOR_NAMES, HEX_CODES))
-
-
 class ColorMatchGame:
     def __init__(self, master):
         self.master = master
