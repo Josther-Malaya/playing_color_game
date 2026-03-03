@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 import os
+import pyttsx3
+import threading
 class GameConfig:
     game_duration = 60
     colors = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
@@ -102,7 +104,7 @@ class GameUi:
             button = tk.Button(
                 row,
                 text=color,
-                font=('Arial', 18, 'bold'),
+                font=('Arial', 27, 'bold'),
                 width=10,
                 state=tk.DISABLED,
                 command=lambda c=color: self.controller.handle_guess(c)
@@ -133,9 +135,17 @@ class ColorMatchGame:
         self.engine = GameEngine(self.config)
         self.storage = HighScoreManager(self.config.high_score_file)
         self.ui = GameUi(root, self, self.config)
+        self.voice = pyttsx3.init()
+        self.voice.setProperty('rate', 180)
         self.high_score = self.storage.load()
         self.timer_id = None
         self.game_running = False
+    def speak_word(self, word):
+        threading.Thread(target=self._speak, args=(word,), daemon=True).start()
+    def _speak(self, word):
+        self.voice.stop()
+        self.voice.say(word)
+        self.voice.runAndWait()
     def start_game(self):
         self.engine.reset()
         self.game_running = True
@@ -146,6 +156,7 @@ class ColorMatchGame:
     def new_round(self):
         word, color = self.engine.next_round()
         self.ui.update_word(word, color)
+        self.speak_word(word)
     def handle_guess(self, choice):
         if not self.game_running:
             return
