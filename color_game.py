@@ -2,10 +2,12 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 import os
-GAME_DURATION_SECONDS = 60
-COLOR_NAMES = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
-HEX_CODES = ['#FF0000', '#0000FF', '#008000', '#FF69B4', '#FFD700', '#8A2BE2', '#FF4500', '#000000']
-COLOR_MAP = dict(zip(COLOR_NAMES, HEX_CODES))
+class GameConfig:
+    game_duration = 60
+    colors = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
+    hex_codes = ['#FF0000', '#0000FF', '#008000', '#FF69B4', '#FFD700', '#8A2BE2', '#FF4500', '#000000']
+    color_map = dict(zip(colors, hex_codes))
+    high_score_file = 'highscore.txt'
 class ColorMatchGame:
     def __init__(self, master):
         self.master = master
