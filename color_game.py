@@ -8,6 +8,40 @@ class GameConfig:
     hex_codes = ['#FF0000', '#0000FF', '#008000', '#FF69B4', '#FFD700', '#8A2BE2', '#FF4500', '#000000']
     color_map = dict(zip(colors, hex_codes))
     high_score_file = 'highscore.txt'
+class HighScoreManager:
+    def __init__(self, filename):
+        self.filename = filename
+    def load(self):
+        if os.path.exists(self.filename):
+            try:
+                with open(self.filename, 'r') as file:
+                    return int(file.read())
+            except:
+                return 0
+        return 0
+    def save(self, score):
+        with open(self.filename, 'w') as file:
+            file.write(str(score))
+class GameEngine:
+    def __init__(self, config):
+        self.config = config
+        self.reset()
+    def reset(self):
+        self.score = 0
+        self.time_left = self.config.game_duration
+        self.correct_color = None
+    def next_round(self):
+        self.correct_color = random.choice(self.config.colors)
+        display_word = random.choice([c for c in self != self.correct_color])
+        text_color = self.config.color_map[self.correct_color]
+        return display_word, text_color
+    def check_answer(self, choice):
+        if choice == self.correct_color:
+            self.score += 1
+            return True
+        return False
+class GameUi:
+
 class ColorMatchGame:
     def __init__(self, master):
         self.master = master
@@ -40,14 +74,6 @@ class ColorMatchGame:
         self.start_button.pack(pady=10)
         self.buttons = []
         self.create_color_buttons()
-        self.high_score = self.load_high_score()
-        self.high_score_label = tk.Label(
-            self.info_frame,
-            text=f"High Score: {self.high_score}",
-            font=self.font_score,
-            bg='#3e4451',
-            fg='#FFD700'
-        )
         self.high_score_label.pack()
         self.instructions = tk.Label(
             self.game_frame,
@@ -131,17 +157,6 @@ class ColorMatchGame:
             self.next_round(correct_guess=True)
         else:
             self.next_round(correct_guess=False)
-    def load_high_score(self):
-        if os.path.exists("highscore.txt"):
-            with open("highscore.txt", "r") as file:
-                try:
-                    return int(file.read())
-                except:
-                    return 0
-        return 0
-    def save_high_score(self):
-        with open("highscore.txt", "w") as file:
-            file.write(str(self.high_score))
 if __name__ == "__main__":
     root = tk.Tk()
     game = ColorMatchGame(root)
