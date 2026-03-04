@@ -3,6 +3,7 @@ from tkinter import messagebox
 import random
 import os
 import pygame
+from tkinter import simpledialog
 class GameConfig:
     game_duration = 60
     colors = ['Red', 'Blue', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange', 'Black']
@@ -21,21 +22,27 @@ class AudioManager:
             self.enabled = True
         except Exception as e:
             print("Audio disabled:", e)
+
     def play_music(self):
         if self.enabled:
             pygame.mixer.music.play(-1)
+
     def stop_music(self):
         if self.enabled:
             pygame.mixer.music.stop()
+
     def play_correct(self):
         if self.enabled:
             self.correct_sound.play()
+
     def play_wrong(self):
         if self.enabled:
             self.wrong_sound.play()
+
 class HighScoreManager:
     def __init__(self, filename):
         self.filename = filename
+
     def load(self):
         if os.path.exists(self.filename):
             try:
@@ -44,17 +51,50 @@ class HighScoreManager:
             except:
                 return 0
         return 0
+
     def save(self, score):
         with open(self.filename, 'w') as file:
             file.write(str(score))
+
+class LeaderboardManager:
+    def __init__(self, filename="leaderboard.txt"):
+        self.filename = filename
+        self.max_entries = 10
+
+    def load(self):
+        if not os.path.exists(self.filename):
+            return []
+        leaderboard = []
+        with open(self.filename, "r") as file:
+            for line in file:
+                name, score = line.strip().split(",")
+                leaderboard.append((name, int(score)))
+        leaderboard.sort(key=lambda x: x[1], reverse=True)
+        return leaderboard
+
+    def save(self, leaderboard):
+        with open(self.filename, "w") as file:
+            for name, score in leaderboard[:self.max_entries]:
+                file.write(f"{name},{score}\n")
+
+    def add_score(self, name, score):
+        leaderboard = self.load()
+        leaderboard.append((name, score))
+        leaderboard.sort(key=lambda x: x[1], reverse=True)
+        leaderboard = leaderboard[:self.max_entries]
+        self.save(leaderboard)
+        return leaderboard
+
 class GameEngine:
     def __init__(self, config):
         self.config = config
         self.reset()
+
     def reset(self):
         self.score = 0
         self.time_left = self.config.game_duration
         self.correct_color = None
+
     def next_round(self):
         self.correct_color = random.choice(self.config.colors)
         display_word = random.choice(
@@ -62,11 +102,13 @@ class GameEngine:
         )
         text_color = self.config.color_map[self.correct_color]
         return display_word, text_color
+
     def check_answer(self, choice):
         if choice == self.correct_color:
             self.score += 1
             return True
         return False
+
 class GameUi:
     def __init__(self, root, controller, config):
         self.root = root
@@ -74,10 +116,12 @@ class GameUi:
         self.config = config
         self.setup_window()
         self.create_widgets()
+
     def setup_window(self):
         self.root.title("Chroma Challenge")
         self.root.geometry("600x600")
         self.root.config(bg='#282c34')
+
     def create_widgets(self):
         self.info_frame = tk.Frame(self.root, bg='#3e4451', pady=10)
         self.info_frame.pack(fill='x')
@@ -128,6 +172,7 @@ class GameUi:
         self.start_button.pack(pady=10)
         self.buttons = []
         self.create_color_button()
+
     def create_color_button(self):
         row = tk.Frame(self.button_frame, bg='#282c34')
         row.pack()
@@ -144,24 +189,54 @@ class GameUi:
             )
             button.grid(row=0, column=i, padx=5, pady=10)
             self.buttons.append(button)
+
     def update_score(self, score):
         self.score_label.config(text=f"Score: {score}")
+
     def update_time(self, time_left):
         self.time_label.config(text=f"Time: {time_left}")
+
     def update_word(self, word, color):
         self.word_label.config(text=word, fg=color)
+
     def show_feedback(self, correct):
         symbol = "✔" if correct else "❌"
         color = "green" if correct else "red"
         self.word_label.config(text=symbol, fg=color)
+
     def toggle_buttons(self, state):
         for button in self.buttons:
             button.config(state=state)
+
     def show_game_over(self, score, high_score, new_record):
         if new_record:
             messagebox.showinfo("New HighScore!", f"New High Score: {high_score}")
         else:
             messagebox.showinfo("Game Over!", f"Final Score: {score}")
+
+    def show_leaderboard(self, leaderboard):
+        top = tk.Toplevel(self.root)
+        top.title("Leaderboard")
+        top.geometry("400x400")
+        top.config(bg="#282c34")
+        title = tk.Label(
+            top,
+            text="🏆 Leaderboard 🏆",
+            font=("Arial", 20, "bold"),
+            bg="#282c34",
+            fg="gold"
+        )
+        title.pack(pady=10)
+        for i, (name, score) in enumerate(leaderboard, start=1):
+            entry = tk.Label(
+                top,
+                text=f"{i}. {name} - {score}",
+                font=("Arial", 16),
+                bg="#282c34",
+                fg="white"
+            )
+            entry.pack(anchor="w", padx=40)
+
 class ColorMatchGame:
     def __init__(self, root):
         self.config = GameConfig()
@@ -172,6 +247,8 @@ class ColorMatchGame:
         self.timer_id = None
         self.game_running = False
         self.audio = AudioManager()
+        self.leaderboard = LeaderboardManager()
+
     def start_game(self):
         self.engine.reset()
         self.game_running = True
@@ -181,10 +258,12 @@ class ColorMatchGame:
         self.countdown()
         self.new_round()
         self.ui.start_button.config(state=tk.DISABLED)
+
     def new_round(self):
         word, color = self.engine.next_round()
         self.ui.update_word(word, color)
         self.ui.toggle_buttons(tk.NORMAL)
+
     def handle_guess(self, choice):
         if not self.game_running:
             return
@@ -197,6 +276,7 @@ class ColorMatchGame:
         else:
             self.audio.play_wrong()
         self.ui.root.after(300, self.new_round)
+
     def countdown(self):
         if not self.game_running:
             return
@@ -206,23 +286,27 @@ class ColorMatchGame:
             self.timer_id = self.ui.root.after(1000, self.countdown)
         else:
             self.end_game()
+
     def end_game(self):
         self.game_running = False
-        self.ui.start_button.config(
-            text="Restart Game",
-            state=tk.NORMAL
-        )
+        self.ui.start_button.config(text="Restart Game", state=tk.NORMAL)
         if self.timer_id:
             self.ui.root.after_cancel(self.timer_id)
         self.ui.toggle_buttons(tk.DISABLED)
         self.audio.stop_music()
+        score = self.engine.score
         new_record = False
-        if self.engine.score > self.high_score:
-            self.high_score = self.engine.score
+        if score > self.high_score:
+            self.high_score = score
             self.storage.save(self.high_score)
             new_record = True
         self.ui.high_score_label.config(text=f"High Score: {self.high_score}")
-        self.ui.show_game_over(self.engine.score, self.high_score, new_record)
+        name = tk.simpledialog.askstring("Game Over", "Enter your name:")
+        if name:
+            leaderboard = self.leaderboard.add_score(name, score)
+            self.ui.show_leaderboard(leaderboard)
+        self.ui.show_game_over(score, self.high_score, new_record)
+        
 if __name__ == "__main__":
     root = tk.Tk()
     app = ColorMatchGame(root)
