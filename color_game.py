@@ -95,7 +95,7 @@ class GameEngine:
         self.time_left = self.config.game_duration
         self.correct_color = None
         self.combo = 0
-        
+
     def next_round(self):
         self.correct_color = random.choice(self.config.colors)
         display_word = random.choice(
@@ -142,7 +142,7 @@ class GameUi:
         self.main_frame.pack(expand=True, fill='both')
         self.game_frame = tk.Frame(self.main_frame, bg='#282c34')
         self.game_frame.pack(side=tk.LEFT, expand=True)
-        self.leaderboard_frame = tk.Frame(self.main_frame, bg='#1f2228', width=200)
+        self.leaderboard_frame = tk.Frame(self.main_frame, bg='#1f2228', width=300)
         self.leaderboard_frame.pack(side=tk.RIGHT, fill='y')
         self.lb_title = tk.Label(
             self.leaderboard_frame,
@@ -307,6 +307,7 @@ class GameUi:
                 fg="gold",
                 font=('Arial', 20, 'bold')
             )
+            
 class ColorMatchGame:
     def __init__(self, root):
         self.config = GameConfig()
