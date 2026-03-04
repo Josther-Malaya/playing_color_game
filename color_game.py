@@ -94,7 +94,8 @@ class GameEngine:
         self.score = 0
         self.time_left = self.config.game_duration
         self.correct_color = None
-
+        self.combo = 0
+        
     def next_round(self):
         self.correct_color = random.choice(self.config.colors)
         display_word = random.choice(
@@ -105,9 +106,13 @@ class GameEngine:
 
     def check_answer(self, choice):
         if choice == self.correct_color:
-            self.score += 1
+            self.combo += 1
+            bonus = min(self.combo // 2, 5)
+            self.score += 1 + bonus
             return True
-        return False
+        else:
+            self.combo = 0
+            return False
 
 class GameUi:
     def __init__(self, root, controller, config):
@@ -133,8 +138,32 @@ class GameUi:
             fg='white'
         )
         self.high_score_label.pack()
-        self.game_frame = tk.Frame(self.root, bg='#282c34')
-        self.game_frame.pack(expand=True)
+        self.main_frame = tk.Frame(self.root, bg='#282c34')
+        self.main_frame.pack(expand=True, fill='both')
+        self.game_frame = tk.Frame(self.main_frame, bg='#282c34')
+        self.game_frame.pack(side=tk.LEFT, expand=True)
+        self.leaderboard_frame = tk.Frame(self.main_frame, bg='#1f2228', width=200)
+        self.leaderboard_frame.pack(side=tk.RIGHT, fill='y')
+        self.lb_title = tk.Label(
+            self.leaderboard_frame,
+            text="🏆 Leaderboard",
+            font=("Arial", 16, "bold"),
+            bg="#1f2228",
+            fg="gold"
+        )
+        self.lb_title.pack(pady=10)
+        self.lb_entries = []
+        for i in range(10):
+            label = tk.Label(
+                self.leaderboard_frame,
+                text=f"{i + 1}. ---",
+                font=("Arial", 12),
+                bg="#1f2228",
+                fg="white",
+                anchor="w"
+            )
+            label.pack(fill="x", padx=10)
+            self.lb_entries.append(label)
         self.button_frame = tk.Frame(self.root, bg='#282c34')
         self.button_frame.pack()
         self.score_label = tk.Label(
@@ -145,6 +174,14 @@ class GameUi:
             fg='#61dafb'
         )
         self.score_label.pack(side=tk.LEFT, padx=20)
+        self.combo_label = tk.Label(
+            self.info_frame,
+            text="Combo: 0",
+            font=('Arial', 14, 'bold'),
+            bg='#3e4451',
+            fg='orange'
+        )
+        self.combo_label.pack()
         self.time_label = tk.Label(
             self.info_frame,
             text="Time: 60",
@@ -237,6 +274,39 @@ class GameUi:
             )
             entry.pack(anchor="w", padx=40)
 
+    def update_leaderboard(self, leaderboard):
+        for i in range(10):
+            if i < len(leaderboard):
+                name, score = leaderboard[i]
+                self.lb_entries[i].config(text=f"{i + 1}. {name} - {score}")
+            else:
+                self.lb_entries[i].config(text=f"{i + 1}. ---")
+
+    def update_combo(self, combo):
+        if combo <= 1:
+            self.combo_label.config(
+                text="Combo: 0",
+                fg="orange",
+                font=('Arial', 14, 'bold')
+            )
+        elif combo < 5:
+            self.combo_label.config(
+                text=f"🔥 Combo: {combo}",
+                fg="orange",
+                font=('Arial', 16, 'bold')
+            )
+        elif combo < 10:
+            self.combo_label.config(
+                text=f"🔥🔥 COMBO x{combo}!",
+                fg="red",
+                font=('Arial', 18, 'bold')
+            )
+        else:
+            self.combo_label.config(
+                text=f"💥 ULTRA COMBO x{combo} 💥",
+                fg="gold",
+                font=('Arial', 20, 'bold')
+            )
 class ColorMatchGame:
     def __init__(self, root):
         self.config = GameConfig()
@@ -248,12 +318,14 @@ class ColorMatchGame:
         self.game_running = False
         self.audio = AudioManager()
         self.leaderboard = LeaderboardManager()
+        self.ui.update_leaderboard(self.leaderboard.load())
 
     def start_game(self):
         self.engine.reset()
         self.game_running = True
         self.ui.toggle_buttons(tk.NORMAL)
         self.ui.update_score(0)
+        self.ui.update_combo(0)
         self.audio.play_music()
         self.countdown()
         self.new_round()
@@ -269,6 +341,7 @@ class ColorMatchGame:
             return
         correct = self.engine.check_answer(choice)
         self.ui.update_score(self.engine.score)
+        self.ui.update_combo(self.engine.combo)
         self.ui.show_feedback(correct)
         self.ui.toggle_buttons(tk.DISABLED)
         if correct:
@@ -301,12 +374,12 @@ class ColorMatchGame:
             self.storage.save(self.high_score)
             new_record = True
         self.ui.high_score_label.config(text=f"High Score: {self.high_score}")
-        name = tk.simpledialog.askstring("Game Over", "Enter your name:")
+        name = simpledialog.askstring("Game Over", "Enter your name:")
         if name:
             leaderboard = self.leaderboard.add_score(name, score)
-            self.ui.show_leaderboard(leaderboard)
+            self.ui.update_leaderboard(leaderboard)
         self.ui.show_game_over(score, self.high_score, new_record)
-        
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = ColorMatchGame(root)
